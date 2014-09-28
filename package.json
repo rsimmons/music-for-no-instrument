@@ -1,0 +1,25 @@
+{
+  "name": "music-for-no-instrument",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Collaborative Web Audio music-making",
+  "main": "server.js",
+  "scripts": {
+    "build": "browserify browser/main.js | uglifyjs -mc > public/static/bundle.js",
+    "watch": "watchify browser/main.js -o public/static/bundle.js -v",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start-dev": "PORT=6969 node server.js",
+    "start": "PORT=80 node server.js"
+  },
+  "author": "Russel Simmons",
+  "license": "MIT",
+  "devDependencies": {
+    "browserify": "^5.12.1",
+    "uglify-js": "^2.4.15",
+    "watchify": "^1.0.6"
+  },
+  "dependencies": {
+    "express": "^4.9.5",
+    "ws": "^0.4.32"
+  }
+}
