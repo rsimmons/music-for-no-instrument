@@ -1,6 +1,7 @@
 'use strict';
 
 var noisehit = require('./instruments/noisehit.js');
+var synthnote = require('./instruments/synthnote.js');
 
 var qs = document.querySelector.bind(document);
 var qsa = document.querySelectorAll.bind(document);
@@ -39,29 +40,31 @@ document.addEventListener('DOMContentLoaded', function() {
     // NOTE: iOS will reject playing of sounds that happen before any user input, so this is necessary
     var audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
-    var noiseBackend = noisehit.createBackend(audioCtx);
-    noiseBackend.getOutputNode().connect(audioCtx.destination);
+    // var inst = noisehit.createBackend(audioCtx);
+    var inst = synthnote.createBackend(audioCtx);
+    inst.getOutputNode().connect(audioCtx.destination);
 
     addPressListener(qs('#play-button'), function(e) {
       e.preventDefault();
-      noiseBackend.processInput();
+      inst.processInput();
     });
- });
 
 /*
-  //var host = location.origin.replace(/^http/, 'ws');
-  var host = 'ws://10.0.1.11:6970';
-  var ws = new WebSocket(host);
+    //var host = location.origin.replace(/^http/, 'ws');
+    var host = 'ws://10.0.1.11:6970';
+    var ws = new WebSocket(host);
 
-  ws.onopen = function(e) {
-    console.log('connected');
-    setInterval(function() {
-      sendMsg(ws, 'ping', {});
-    }, 1000);
-  };
+    ws.onopen = function(e) {
+      console.log('connected');
+      setInterval(function() {
+        sendMsg(ws, 'ping', {});
+      }, 1000);
+    };
 
-  ws.onmessage = function(e) {
-    console.log(e.data);
-  };
+    ws.onmessage = function(e) {
+      console.log(e.data);
+    };
 */
+
+ });
 });
