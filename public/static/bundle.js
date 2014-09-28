@@ -171,24 +171,40 @@ document.addEventListener('DOMContentLoaded', function() {
       inst.processInput();
     });
 
-/*
-    //var host = location.origin.replace(/^http/, 'ws');
-    var host = 'ws://10.0.1.11:6970';
+    var host = location.origin.replace(/^http/, 'ws');
+    console.log(host);
     var ws = new WebSocket(host);
+
+    var pingSeqnum = 0;
+    var pingSentTimes = {};
 
     ws.onopen = function(e) {
       console.log('connected');
       setInterval(function() {
-        sendMsg(ws, 'ping', {});
+        pingSentTimes[pingSeqnum] = Date.now();
+        sendMsg(ws, 'ping', {seqnum: pingSeqnum});
+        pingSeqnum++;
       }, 1000);
     };
 
     ws.onmessage = function(e) {
-      console.log(e.data);
-    };
-*/
+      console.log('received message', e.data);
+      var msg = JSON.parse(e.data);
 
- });
+      switch (msg.name) {
+        case 'pong':
+          var seqnum = msg.args.seqnum;
+          var dt = Date.now() - pingSentTimes[seqnum];
+          console.log('latency is', dt, 'ms');
+          delete pingSentTimes[seqnum];
+          break;
+
+        default:
+          console.log('unknown message');
+          break;
+      }
+    };
+  });
 });
 
 },{"./instruments/noisehit.js":"/Users/russ/Projects/music-for-no-instrument/browser/instruments/noisehit.js","./instruments/synthnote.js":"/Users/russ/Projects/music-for-no-instrument/browser/instruments/synthnote.js"}]},{},["/Users/russ/Projects/music-for-no-instrument/browser/main.js"]);

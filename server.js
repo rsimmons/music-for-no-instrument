@@ -16,9 +16,29 @@ console.log('Listening on port', port);
 
 var wss = new WebSocket.Server({server: server});
 
+function sendMsg(ws, name, args) {
+  ws.send(JSON.stringify({
+    name: name,
+    args: args
+  }));
+}
+
 wss.on('connection', function(ws) {
-    console.log('connection');
-    ws.on('message', function(message) {
-        console.log('received', message);
-    });
+  console.log('connection accepted');
+
+  ws.on('message', function(messageStr) {
+    console.log('received message', messageStr);
+
+    var msg = JSON.parse(messageStr);
+
+    switch (msg.name) {
+      case 'ping':
+        sendMsg(ws, 'pong', {seqnum: msg.args.seqnum});
+        break;
+
+      default:
+        console.log('unknown message');
+        break;
+    }
+  });
 });
