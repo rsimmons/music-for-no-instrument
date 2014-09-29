@@ -23,6 +23,11 @@ body {
   margin: auto;
 }
 
+#status-display {
+  font-size: 24px;
+  margin-bottom: 10px;
+}
+
 #select-inst-button {
   height: 100px;
   line-height: 100px;

@@ -36,7 +36,7 @@ function randHex64bits() {
 var players = {};
 
 wss.on('connection', function(ws) {
-  console.log('connection accepted');
+  console.log('connection accepted from', ws._socket.remoteAddress);
 
   var pid = randHex64bits();
   console.log('assigned pid', pid);
@@ -46,7 +46,7 @@ wss.on('connection', function(ws) {
   for (var otherPid in players) {
     if (players.hasOwnProperty(otherPid)) {
       otherPlayersInfo[otherPid] = {
-        instrument: players[otherPid].instrument
+        instrumentName: players[otherPid].instrumentName
       }
     }
   }
@@ -65,6 +65,14 @@ wss.on('connection', function(ws) {
     instrumentName: null
   };
 
+  function broadcastMsg(name, args) {
+    for (var p in players) {
+      if (players.hasOwnProperty(p)) {
+        sendMsg(players[p].ws, name, args);
+      }
+    }
+  }
+
   ws.on('message', function(messageStr) {
     console.log('received message', messageStr);
 
@@ -77,14 +85,15 @@ wss.on('connection', function(ws) {
 
       case 'myInstrumentSelection':
         // register instrument selection
-        players[pid].instrument = msg.args.name;
+        players[pid].instrumentName = msg.args.instrumentName;
 
         // let all players (including this one) know about instrument change
-        for (var p in players) {
-          if (players.hasOwnProperty(p)) {
-            sendMsg(players[p].ws, 'playerInstrumentChange', {pid: pid, instrumentName: msg.args.instrumentName});
-          }
-        }
+        broadcastMsg('playerInstrumentChange', {pid: pid, instrumentName: msg.args.instrumentName});
+        break;
+
+      case 'myInstrumentData':
+        // send this instrument data to all players, including the one who sent it to us
+        broadcastMsg('playerInstrumentData', {pid: pid, data: msg.args.data});
         break;
 
       default:

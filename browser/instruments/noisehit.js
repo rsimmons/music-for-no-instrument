@@ -62,4 +62,13 @@ module.exports = {
   createBackend: function(ctx) {
     return new Backend(ctx);
   },
+
+  createFrontend: function(container, sendData) {
+    container.innerHTML = '<div id="note-button" style="height:100px;border:1px solid green;line-height:100px;text-align:center">Noise Hit</div>';
+
+    instrumentUtil.addPressListener(container.querySelector('#note-button'), function(e) {
+      e.preventDefault();
+      sendData();
+    });
+  }
 }

@@ -1,4 +1,12 @@
-(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({"/Users/russ/Projects/music-for-no-instrument/browser/instruments/noisehit.js":[function(require,module,exports){
+(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({"/Users/russ/Projects/music-for-no-instrument/browser/instrumentUtil.js":[function(require,module,exports){
+'use strict';
+
+exports.addPressListener = function(elem, fn) {
+  elem.addEventListener('mousedown', fn, false);
+  elem.addEventListener('touchstart', fn, false);
+}
+
+},{}],"/Users/russ/Projects/music-for-no-instrument/browser/instruments/noisehit.js":[function(require,module,exports){
 'use strict';
 
 // slightly based on http://webaudioapi.com/samples/procedural/procedural-sample.js
@@ -63,10 +71,21 @@ module.exports = {
   createBackend: function(ctx) {
     return new Backend(ctx);
   },
+
+  createFrontend: function(container, sendData) {
+    container.innerHTML = '<div id="note-button" style="height:100px;border:1px solid green;line-height:100px;text-align:center">Noise Hit</div>';
+
+    instrumentUtil.addPressListener(container.querySelector('#note-button'), function(e) {
+      e.preventDefault();
+      sendData();
+    });
+  }
 }
 
 },{}],"/Users/russ/Projects/music-for-no-instrument/browser/instruments/synthnote.js":[function(require,module,exports){
 'use strict';
+
+var instrumentUtil = require('../instrumentUtil.js');
 
 /**
  * Schedules a certain hard-coded envelope on a given AudioParam, starting at t0.
@@ -117,10 +136,21 @@ module.exports = {
   createBackend: function(ctx) {
     return new Backend(ctx);
   },
+
+  createFrontend: function(container, sendData) {
+    container.innerHTML = '<div id="note-button" style="height:100px;border:1px solid green;line-height:100px;text-align:center">Synth Note</div>';
+
+    instrumentUtil.addPressListener(container.querySelector('#note-button'), function(e) {
+      e.preventDefault();
+      sendData();
+    });
+  }
 }
 
-},{}],"/Users/russ/Projects/music-for-no-instrument/browser/main.js":[function(require,module,exports){
+},{"../instrumentUtil.js":"/Users/russ/Projects/music-for-no-instrument/browser/instrumentUtil.js"}],"/Users/russ/Projects/music-for-no-instrument/browser/main.js":[function(require,module,exports){
 'use strict';
+
+var instrumentUtil = require('./instrumentUtil.js');
 
 var noisehit = require('./instruments/noisehit.js');
 var synthnote = require('./instruments/synthnote.js');
@@ -132,11 +162,6 @@ var instrumentPlugins = {
 
 var qs = document.querySelector.bind(document);
 var qsa = document.querySelectorAll.bind(document);
-
-function addPressListener(elem, fn) {
-  elem.addEventListener('mousedown', fn, false);
-  elem.addEventListener('touchstart', fn, false);
-}
 
 function removeNode(n) {
   n.parentNode.removeChild(n);
@@ -162,9 +187,13 @@ function sendMsg(ws, name, args) {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
+  // prevent scrolling
   document.addEventListener('touchmove', function(e) {
     e.preventDefault();
   });
+
+  var instUiContainer = qs('#inst-ui-container');
+  var statusDisplay = qs('#status-display');
 
   qs('#begin-button').addEventListener('click', function(e) {
     e.preventDefault();
@@ -176,17 +205,13 @@ document.addEventListener('DOMContentLoaded', function() {
     // NOTE: iOS will reject playing of sounds that happen before any user input, so this is necessary
     var audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
-    // var inst = noisehit.createBackend(audioCtx);
-    var inst = synthnote.createBackend(audioCtx);
-    inst.getOutputNode().connect(audioCtx.destination);
-
-    addPressListener(qs('#play-button'), function(e) {
-      e.preventDefault();
-      inst.processInput();
-    });
+    // play welcome sound
+    var back = noisehit.createBackend(audioCtx);
+    back.getOutputNode().connect(audioCtx.destination);
+    back.processInput();
 
     var host = location.origin.replace(/^http/, 'ws');
-    console.log(host);
+    console.log('connecting to', host);
     var ws = new WebSocket(host);
 
     var pingSeqnum = 0;
@@ -201,13 +226,11 @@ document.addEventListener('DOMContentLoaded', function() {
       console.log('connected');
 
       // send regular pings
-      /*
       setInterval(function() {
         pingSentTimes[pingSeqnum] = Date.now();
         sendMsg(ws, 'ping', {seqnum: pingSeqnum});
         pingSeqnum++;
       }, 1000);
-      */
     };
 
     function setPlayerInstrument(p, instName) {
@@ -219,15 +242,32 @@ document.addEventListener('DOMContentLoaded', function() {
         players[p].instrumentBackend = null;
       }
 
+      // look up plugin of new instrument
+      var plugin = null;
       if (instName) {
-        // TODO: create backend
+        plugin = instrumentPlugins[instName];
+      }
+
+      if (instName) {
+        // create backend
+        var backend = plugin.createBackend(audioCtx);
+
+        // connect backend to audio output
+        backend.getOutputNode().connect(audioCtx.destination);
+
+        // store new backend reference
+        players[p].instrumentBackend = backend;
       }
 
       // if this message is about me, update/create my instrument frontend
       if (p === myPid) {
-        var plugin = instrumentPlugins[instName];
-        // TODO: create frontend
-        // var frontend = plugin.createFrontend();
+        // remove old frontend UI
+        instUiContainer.innerHTML = '';
+
+        plugin.createFrontend(instUiContainer, function(data) {
+          // send this data that came from instrument frontend to the instrument's backend (via server)
+          sendMsg(ws, 'myInstrumentData', {data: data});
+        });
       }
     }
 
@@ -239,13 +279,15 @@ document.addEventListener('DOMContentLoaded', function() {
         case 'pong':
           var seqnum = msg.args.seqnum;
           var dt = Date.now() - pingSentTimes[seqnum];
-          console.log('latency is', dt, 'ms');
+          // console.log('latency is', dt, 'ms');
+          statusDisplay.textContent = 'Latency: ' + dt + 'ms';
+
           delete pingSentTimes[seqnum];
           break;
 
         case 'welcome':
           myPid = msg.args.yourPid;
-          console.log('assigned pid', myPid);
+          console.log('was assigned pid', myPid);
 
           players[myPid] = {
             instrumentName: null,
@@ -256,7 +298,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (msg.args.otherPlayers.hasOwnProperty(p)) {
               players[p] = {
                 instrumentName: null,
-                instrumentBackend: null,
+                instrumentBackend: null
               }
 
               // initialize the player's instrument
@@ -279,7 +321,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
         case 'playerInstrumentChange':
           setPlayerInstrument(msg.args.pid, msg.args.instrumentName);
+          break;
 
+        case 'playerInstrumentData':
+          players[msg.args.pid].instrumentBackend.processInput(msg.args.data);
           break;
 
         case 'playerLeft':
@@ -299,4 +344,4 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 });
 
-},{"./instruments/noisehit.js":"/Users/russ/Projects/music-for-no-instrument/browser/instruments/noisehit.js","./instruments/synthnote.js":"/Users/russ/Projects/music-for-no-instrument/browser/instruments/synthnote.js"}]},{},["/Users/russ/Projects/music-for-no-instrument/browser/main.js"]);
+},{"./instrumentUtil.js":"/Users/russ/Projects/music-for-no-instrument/browser/instrumentUtil.js","./instruments/noisehit.js":"/Users/russ/Projects/music-for-no-instrument/browser/instruments/noisehit.js","./instruments/synthnote.js":"/Users/russ/Projects/music-for-no-instrument/browser/instruments/synthnote.js"}]},{},["/Users/russ/Projects/music-for-no-instrument/browser/main.js"]);

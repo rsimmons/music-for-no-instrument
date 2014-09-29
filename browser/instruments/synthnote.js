@@ -1,5 +1,7 @@
 'use strict';
 
+var instrumentUtil = require('../instrumentUtil.js');
+
 /**
  * Schedules a certain hard-coded envelope on a given AudioParam, starting at t0.
  */
@@ -49,4 +51,13 @@ module.exports = {
   createBackend: function(ctx) {
     return new Backend(ctx);
   },
+
+  createFrontend: function(container, sendData) {
+    container.innerHTML = '<div id="note-button" style="height:100px;border:1px solid green;line-height:100px;text-align:center">Synth Note</div>';
+
+    instrumentUtil.addPressListener(container.querySelector('#note-button'), function(e) {
+      e.preventDefault();
+      sendData();
+    });
+  }
 }
