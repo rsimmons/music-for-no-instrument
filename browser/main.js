@@ -67,6 +67,12 @@ document.addEventListener('DOMContentLoaded', function() {
     var pingSeqnum = 0;
     var pingSentTimes = {};
 
+    // ring buffer of skew estimates from pings. a positive value means server clock is ahead of ours.
+    var SKEW_BUFFER_SIZE = 32;
+    var skewBuffer = [];
+    var skewBufferPos = 0;
+    var skewEstimate = 0;
+
     var welcomeReceived = false;
     var myPid;
 
@@ -115,8 +121,9 @@ document.addEventListener('DOMContentLoaded', function() {
         instUiContainer.innerHTML = '';
 
         plugin.createFrontend(instUiContainer, function(data) {
-          // send this data that came from instrument frontend to the instrument's backend (via server)
-          sendMsg(ws, 'myInstrumentData', {data: data});
+          // send this data that came from instrument frontend to the instrument's backend (via server).
+          // we timestamp the data with an estimate of the _server_ clock time at which it happened
+          sendMsg(ws, 'myInstrumentData', {data: data, serverClock: Date.now() + skewEstimate});
         });
       }
     }
@@ -128,9 +135,29 @@ document.addEventListener('DOMContentLoaded', function() {
       switch (msg.name) {
         case 'pong':
           var seqnum = msg.args.seqnum;
-          var dt = Date.now() - pingSentTimes[seqnum];
+          var now = Date.now();
+          var dt = now - pingSentTimes[seqnum];
           // console.log('latency is', dt, 'ms');
           statusDisplay.textContent = 'Latency: ' + dt + 'ms';
+
+          // estimate current clock time on server to be what it sent us plus half of ping.
+          // so skew is then (estimated) current server clock time minus our local clock time
+          var skew = (msg.args.clock + 0.5*dt) - now;
+
+          if (skewBuffer.length < SKEW_BUFFER_SIZE) {
+            skewBuffer.push(skew);
+          } else {
+            skewBuffer[skewBufferPos] = skew;
+            skewBufferPos = (skewBufferPos + 1) % SKEW_BUFFER_SIZE;
+          }
+
+          var skewSum = 0;
+          for (var i = 0; i < skewBuffer.length; i++) {
+            skewSum += skewBuffer[i];
+          }
+          skewEstimate = skewSum/skewBuffer.length;
+
+          // statusDisplay.textContent = 'Skew: ' + skewEstimate;
 
           delete pingSentTimes[seqnum];
           break;

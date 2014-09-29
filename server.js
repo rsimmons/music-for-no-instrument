@@ -74,13 +74,13 @@ wss.on('connection', function(ws) {
   }
 
   ws.on('message', function(messageStr) {
-    console.log('received message', messageStr);
+    console.log(Date.now(), 'received message', messageStr);
 
     var msg = JSON.parse(messageStr);
 
     switch (msg.name) {
       case 'ping':
-        sendMsg(ws, 'pong', {seqnum: msg.args.seqnum});
+        sendMsg(ws, 'pong', {seqnum: msg.args.seqnum, clock: Date.now()});
         break;
 
       case 'myInstrumentSelection':
