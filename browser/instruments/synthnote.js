@@ -38,9 +38,11 @@ function Backend(ctx) {
   this.filterNode.connect(this.volumeEnvNode);
 }
 
-Backend.prototype.processInput = function(input) {
+Backend.prototype.processInput = function(data, clockTime) {
   // for now, no matter what input we get, we just play the same "note"
-  scheduleParameterEnvelope(this.ctx.currentTime, this.volumeEnvNode.gain);
+  var ctxCur = this.ctx.currentTime;
+  var t = (clockTime > ctxCur) ? clockTime : ctxCur;
+  scheduleParameterEnvelope(t, this.volumeEnvNode.gain);
 };
 
 Backend.prototype.getOutputNode = function() {

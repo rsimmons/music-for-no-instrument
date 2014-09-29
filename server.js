@@ -74,13 +74,15 @@ wss.on('connection', function(ws) {
   }
 
   ws.on('message', function(messageStr) {
-    console.log(Date.now(), 'received message', messageStr);
+    var now = 0.001*Date.now();
+
+    console.log(now, 'received message', messageStr);
 
     var msg = JSON.parse(messageStr);
 
     switch (msg.name) {
       case 'ping':
-        sendMsg(ws, 'pong', {seqnum: msg.args.seqnum, clock: Date.now()});
+        sendMsg(ws, 'pong', {seqnum: msg.args.seqnum, serverClock: now});
         break;
 
       case 'myInstrumentSelection':
@@ -93,7 +95,7 @@ wss.on('connection', function(ws) {
 
       case 'myInstrumentData':
         // send this instrument data to all players, including the one who sent it to us
-        broadcastMsg('playerInstrumentData', {pid: pid, data: msg.args.data});
+        broadcastMsg('playerInstrumentData', {pid: pid, data: msg.args.data, serverClock: msg.args.serverClock});
         break;
 
       default:

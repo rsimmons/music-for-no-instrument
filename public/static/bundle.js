@@ -123,9 +123,11 @@ function Backend(ctx) {
   this.filterNode.connect(this.volumeEnvNode);
 }
 
-Backend.prototype.processInput = function(input) {
+Backend.prototype.processInput = function(data, clockTime) {
   // for now, no matter what input we get, we just play the same "note"
-  scheduleParameterEnvelope(this.ctx.currentTime, this.volumeEnvNode.gain);
+  var ctxCur = this.ctx.currentTime;
+  var t = (clockTime > ctxCur) ? clockTime : ctxCur;
+  scheduleParameterEnvelope(t, this.volumeEnvNode.gain);
 };
 
 Backend.prototype.getOutputNode = function() {
@@ -223,6 +225,8 @@ document.addEventListener('DOMContentLoaded', function() {
     var skewBufferPos = 0;
     var skewEstimate = 0;
 
+    var FIXED_LATENCY_COMPENSATION = 0.100;
+
     var welcomeReceived = false;
     var myPid;
 
@@ -233,7 +237,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
       // send regular pings
       setInterval(function() {
-        pingSentTimes[pingSeqnum] = Date.now();
+        pingSentTimes[pingSeqnum] = audioCtx.currentTime;
         sendMsg(ws, 'ping', {seqnum: pingSeqnum});
         pingSeqnum++;
       }, 1000);
@@ -273,7 +277,7 @@ document.addEventListener('DOMContentLoaded', function() {
         plugin.createFrontend(instUiContainer, function(data) {
           // send this data that came from instrument frontend to the instrument's backend (via server).
           // we timestamp the data with an estimate of the _server_ clock time at which it happened
-          sendMsg(ws, 'myInstrumentData', {data: data, serverClock: Date.now() + skewEstimate});
+          sendMsg(ws, 'myInstrumentData', {data: data, serverClock: audioCtx.currentTime + skewEstimate + FIXED_LATENCY_COMPENSATION});
         });
       }
     }
@@ -285,14 +289,14 @@ document.addEventListener('DOMContentLoaded', function() {
       switch (msg.name) {
         case 'pong':
           var seqnum = msg.args.seqnum;
-          var now = Date.now();
+          var now = audioCtx.currentTime;
           var dt = now - pingSentTimes[seqnum];
           // console.log('latency is', dt, 'ms');
-          statusDisplay.textContent = 'Latency: ' + dt + 'ms';
+          statusDisplay.textContent = 'Latency: ' + Math.floor(1000*dt) + 'ms';
 
           // estimate current clock time on server to be what it sent us plus half of ping.
-          // so skew is then (estimated) current server clock time minus our local clock time
-          var skew = (msg.args.clock + 0.5*dt) - now;
+          // so skew is then (estimated) current server clock time minus our local AudioContext clock time
+          var skew = (msg.args.serverClock + 0.5*dt) - now;
 
           if (skewBuffer.length < SKEW_BUFFER_SIZE) {
             skewBuffer.push(skew);
@@ -306,8 +310,6 @@ document.addEventListener('DOMContentLoaded', function() {
             skewSum += skewBuffer[i];
           }
           skewEstimate = skewSum/skewBuffer.length;
-
-          // statusDisplay.textContent = 'Skew: ' + skewEstimate;
 
           delete pingSentTimes[seqnum];
           break;
@@ -351,7 +353,7 @@ document.addEventListener('DOMContentLoaded', function() {
           break;
 
         case 'playerInstrumentData':
-          players[msg.args.pid].instrumentBackend.processInput(msg.args.data);
+          players[msg.args.pid].instrumentBackend.processInput(msg.args.data, msg.args.serverClock - skewEstimate);
           break;
 
         case 'playerLeft':
