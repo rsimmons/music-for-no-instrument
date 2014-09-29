@@ -126,7 +126,15 @@ function Backend(ctx) {
 Backend.prototype.processInput = function(data, clockTime) {
   // for now, no matter what input we get, we just play the same "note"
   var ctxCur = this.ctx.currentTime;
-  var t = (clockTime > ctxCur) ? clockTime : ctxCur;
+  var t;
+  if (clockTime > ctxCur) {
+    console.log('comp: OK');
+    t = clockTime;
+  } else {
+    console.log('comp: BEHIND');
+    t = ctxCur;
+  }
+  // var t = (clockTime > ctxCur) ? clockTime : ctxCur;
   scheduleParameterEnvelope(t, this.volumeEnvNode.gain);
 };
 
