@@ -18,7 +18,21 @@ body {
   font-size: 32px;
 }
 
-#begin-overlay {
+#main {
+  width: 700px;
+  margin: auto;
+}
+
+#select-inst-button {
+  height: 100px;
+  line-height: 100px;
+  text-align: center;
+  border: 1px solid black;
+  border-radius: 10px;
+  margin-bottom: 20px;
+}
+
+#grey-overlay {
   position: fixed;
   top: 0;
   left: 0;
@@ -29,13 +43,13 @@ body {
 }
 
 #begin-button {
-  width: 300px;
+  width: 400px;
   height: 200px;
   line-height: 200px;
   position: fixed;
   top: 50%; 
   left: 50%;
-  margin-left: -150px;
+  margin-left: -200px;
   margin-top: -100px;
   background-color: #DB9D19;
   border-radius: 10px;
