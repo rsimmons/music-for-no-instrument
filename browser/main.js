@@ -73,7 +73,7 @@ document.addEventListener('DOMContentLoaded', function() {
     var skewBufferPos = 0;
     var skewEstimate = 0;
 
-    var FIXED_LATENCY_COMPENSATION = 0.100;
+    var FIXED_LATENCY_COMPENSATION = 0.050;
 
     var welcomeReceived = false;
     var myPid;
@@ -88,7 +88,7 @@ document.addEventListener('DOMContentLoaded', function() {
         pingSentTimes[pingSeqnum] = audioCtx.currentTime;
         sendMsg(ws, 'ping', {seqnum: pingSeqnum});
         pingSeqnum++;
-      }, 1000);
+      }, 100);
     };
 
     function setPlayerInstrument(p, instName) {
